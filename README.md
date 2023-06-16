@@ -1,5 +1,5 @@
-# compress
-A quick CLI compression utility powered by Rust.
+# Compress
+A simple CLI compression utility powered by Rust.
 
 ## Why
 I wanted to create a useful program that was written in Rust.  Primarily meant as a learning experience in writing tools in Rust.
@@ -15,3 +15,7 @@ I wanted to create a useful program that was written in Rust.  Primarily meant a
 # This should compress and decompress the source code
 cat src/main.rs | ./compress | ./compress -d
 ```
+
+## TODO
+  - Understand Rust interfaces better so the compression algorithms can be made to be more generic
+  - Add more compression algs
