@@ -26,19 +26,20 @@ fn main() -> io::Result<()> {
             Ok(_) => (),
             Err(error) => panic!("{error}"),
         }
-
         println!("Requires STDIN... Nothing found");
         return Ok(());
     }
 
-    if args.decompress {
-        return args.algorithm.decompress();
-    }
-
-    let c = match args.algorithm.compress() {
+    let c = if args.decompress {
+        args.algorithm.decompress()
+    } else {
+        args.algorithm.compress()
+    };
+    let c = match c {
         Ok(writer) => writer,
         Err(error) => panic!("Unable to encode: {error}"),
     };
+
     let mut stdout = std::io::stdout();
     match stdout.write(&c) {
         Ok(_) => Ok(()),
@@ -76,7 +77,7 @@ enum Algorithms {
 }
 
 impl Algorithms {
-    pub fn compress(&self) -> Result<Vec<u8>, std::io::Error> {
+    pub fn compress(&self) -> io::Result<Vec<u8>> {
         let mut e = match self {
             Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()),
         };
@@ -93,7 +94,7 @@ impl Algorithms {
         e.compress()
     }
 
-    pub fn decompress(&self) -> io::Result<()> {
+    pub fn decompress(&self) -> io::Result<Vec<u8>> {
         let stdin = io::stdin();
         let mut stdin = stdin.lock();
         let buf = stdin.fill_buf().unwrap();
@@ -102,13 +103,12 @@ impl Algorithms {
             Self::GZIP => GzDecoder::new(buf),
         };
         let mut s = String::new();
-
         d.decompress(&mut s)?;
 
-        println!("{s}");
         // Consume the buffer and make sure no one else uses it.
         let len = buf.len();
         stdin.consume(len);
-        Ok(())
+
+        Ok(s.into_bytes())
     }
 }
