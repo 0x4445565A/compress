@@ -16,7 +16,7 @@ struct Args {
     algorithm: Algorithms,
 }
 
-fn main() {
+fn main() -> io::Result<()> {
     let args = Args::parse();
 
     if atty::is(atty::Stream::Stdin) {
@@ -28,12 +28,11 @@ fn main() {
         }
 
         println!("Requires STDIN... Nothing found");
-        return;
+        return Ok(());
     }
 
     if args.decompress {
-        args.algorithm.decompress();
-        return;
+        return args.algorithm.decompress();
     }
 
     let c = match args.algorithm.compress() {
@@ -42,8 +41,32 @@ fn main() {
     };
     let mut stdout = std::io::stdout();
     match stdout.write(&c) {
-        Ok(_) => (),
+        Ok(_) => Ok(()),
         Err(error) => panic!("Unable to write to STDOUT: {error}"),
+    }
+}
+
+trait Compressor {
+    fn compress(self) -> io::Result<Vec<u8>>;
+    fn buffer(&mut self, buf: &[u8]) -> io::Result<()>;
+}
+
+impl Compressor for GzEncoder<Vec<u8>> {
+    fn compress(self) -> io::Result<Vec<u8>> {
+        self.finish()
+    }
+    fn buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.write_all(buf)
+    }
+}
+
+trait Decompressor {
+    fn decompress(&mut self, buf: &mut String) -> io::Result<usize>;
+}
+
+impl Decompressor for GzDecoder<&[u8]> {
+    fn decompress(&mut self, buf: &mut String) -> io::Result<usize> {
+        self.read_to_string(buf)
     }
 }
 
@@ -54,46 +77,38 @@ enum Algorithms {
 
 impl Algorithms {
     pub fn compress(&self) -> Result<Vec<u8>, std::io::Error> {
-        match self {
-            Self::GZIP => self.gzip_compress(),
-        }
-    }
+        let mut e = match self {
+            Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()),
+        };
 
-    pub fn decompress(&self) {
-        match self {
-            Self::GZIP => self.gzip_decompress(),
-        }
-    }
-
-    fn gzip_compress(&self) -> Result<Vec<u8>, std::io::Error> {
         let stdin = io::stdin();
-        let mut e = GzEncoder::new(Vec::new(), Compression::default());
         for line in stdin.lock().lines() {
             let line = match line {
                 Ok(line) => format!("{line}\n"),
                 Err(error) => panic!("Unable to read STDIN: {error}"),
             };
-            e.write_all(line.as_bytes())?;
+            e.buffer(line.as_bytes())?;
         }
 
-        e.finish()
+        e.compress()
     }
 
-    fn gzip_decompress(&self) {
+    pub fn decompress(&self) -> io::Result<()> {
         let stdin = io::stdin();
         let mut stdin = stdin.lock();
         let buf = stdin.fill_buf().unwrap();
 
-        let mut d: GzDecoder<&[u8]> = GzDecoder::new(buf);
+        let mut d = match self {
+            Self::GZIP => GzDecoder::new(buf),
+        };
         let mut s = String::new();
-        match d.read_to_string(&mut s) {
-            Ok(_) => (),
-            Err(error) => panic!("Unable to decode: {error}"),
-        }
-        println!("{s}");
 
+        d.decompress(&mut s)?;
+
+        println!("{s}");
         // Consume the buffer and make sure no one else uses it.
         let len = buf.len();
         stdin.consume(len);
+        Ok(())
     }
 }
