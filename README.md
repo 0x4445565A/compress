@@ -12,10 +12,21 @@ I wanted to create a useful program that was written in Rust.  Primarily meant a
 
 ## Usage
 ```
-# This should compress and decompress the source code
-cat src/main.rs | ./compress | ./compress -d
+Simple compress tool for quick CLI STDIN compression/decompression
+
+Usage: compress [OPTIONS]
+
+Options:
+  -d, --decompress             Decompress the IO stream
+  -a, --algorithm <ALGORITHM>  Which algorithm should we use [default: gzip] [possible values: gzip, zlib, deflate]
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
 
-## TODO
-  - Understand Rust interfaces better so the compression algorithms can be made to be more generic
-  - Add more compression algs
+```
+# This should compress and decompress the source code using gzip
+cat src/main.rs | ./compress | ./compress -d
+
+# This should compress and decompress the source code using zlib
+cat src/main.rs | ./compress -a zlib | ./compress -d -a zlib
+```
