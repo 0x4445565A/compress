@@ -30,3 +30,7 @@ cat src/main.rs | ./compress | ./compress -d
 # This should compress and decompress the source code using zlib
 cat src/main.rs | ./compress -a zlib | ./compress -d -a zlib
 ```
+
+## Build
+wowie, what crazy documentation
+`cargo build --release`
