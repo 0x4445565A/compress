@@ -1,6 +1,7 @@
 use clap::{Parser, ValueEnum};
 use flate2::{
-    write::GzDecoder, write::GzEncoder, write::ZlibDecoder, write::ZlibEncoder, Compression,
+    write::DeflateDecoder, write::DeflateEncoder, write::GzDecoder, write::GzEncoder,
+    write::ZlibDecoder, write::ZlibEncoder, Compression,
 };
 
 use std::io::{self, BufRead, Write};
@@ -65,6 +66,7 @@ trait Encoder {
     fn buffer(&mut self, buf: &[u8]) -> io::Result<()>;
 }
 
+// GZip
 impl Encoder for GzEncoder<Vec<u8>> {
     fn encode(self) -> io::Result<Vec<u8>> {
         self.finish()
@@ -83,6 +85,7 @@ impl Encoder for GzDecoder<Vec<u8>> {
     }
 }
 
+// Zlib
 impl Encoder for ZlibEncoder<Vec<u8>> {
     fn encode(self) -> io::Result<Vec<u8>> {
         self.finish()
@@ -101,10 +104,30 @@ impl Encoder for ZlibDecoder<Vec<u8>> {
     }
 }
 
+// Deflate
+impl Encoder for DeflateEncoder<Vec<u8>> {
+    fn encode(self) -> io::Result<Vec<u8>> {
+        self.finish()
+    }
+    fn buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.write_all(buf)
+    }
+}
+
+impl Encoder for DeflateDecoder<Vec<u8>> {
+    fn encode(self) -> io::Result<Vec<u8>> {
+        self.finish()
+    }
+    fn buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.write_all(buf)
+    }
+}
+
 #[derive(Debug, Clone, ValueEnum)]
 enum Algorithms {
     GZIP,
     ZLIB,
+    DEFLATE,
 }
 
 impl Algorithms {
@@ -112,6 +135,7 @@ impl Algorithms {
         match self {
             Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()).run(),
             Self::ZLIB => ZlibEncoder::new(Vec::new(), Compression::default()).run(),
+            Self::DEFLATE => DeflateEncoder::new(Vec::new(), Compression::default()).run(),
         }
     }
 
@@ -119,6 +143,7 @@ impl Algorithms {
         match self {
             Self::GZIP => GzDecoder::new(Vec::new()).run(),
             Self::ZLIB => ZlibDecoder::new(Vec::new()).run(),
+            Self::DEFLATE => DeflateDecoder::new(Vec::new()).run(),
         }
     }
 }
