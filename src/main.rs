@@ -1,5 +1,7 @@
 use clap::{Parser, ValueEnum};
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use flate2::{
+    read::GzDecoder, read::ZlibDecoder, write::GzEncoder, write::ZlibEncoder, Compression,
+};
 
 use std::io::{self, BufRead, Read, Write};
 use std::str;
@@ -47,13 +49,13 @@ fn main() -> io::Result<()> {
     }
 }
 
-trait Compressor {
-    fn compress(self) -> io::Result<Vec<u8>>;
+trait Encoder {
+    fn encode(self) -> io::Result<Vec<u8>>;
     fn buffer(&mut self, buf: &[u8]) -> io::Result<()>;
 }
 
-impl Compressor for GzEncoder<Vec<u8>> {
-    fn compress(self) -> io::Result<Vec<u8>> {
+impl Encoder for GzEncoder<Vec<u8>> {
+    fn encode(self) -> io::Result<Vec<u8>> {
         self.finish()
     }
     fn buffer(&mut self, buf: &[u8]) -> io::Result<()> {
@@ -61,12 +63,27 @@ impl Compressor for GzEncoder<Vec<u8>> {
     }
 }
 
-trait Decompressor {
-    fn decompress(&mut self, buf: &mut String) -> io::Result<usize>;
+impl Encoder for ZlibEncoder<Vec<u8>> {
+    fn encode(self) -> io::Result<Vec<u8>> {
+        self.finish()
+    }
+    fn buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.write_all(buf)
+    }
 }
 
-impl Decompressor for GzDecoder<&[u8]> {
-    fn decompress(&mut self, buf: &mut String) -> io::Result<usize> {
+trait Decoder {
+    fn decode(&mut self, buf: &mut String) -> io::Result<usize>;
+}
+
+impl Decoder for GzDecoder<&[u8]> {
+    fn decode(&mut self, buf: &mut String) -> io::Result<usize> {
+        self.read_to_string(buf)
+    }
+}
+
+impl Decoder for ZlibDecoder<&[u8]> {
+    fn decode(&mut self, buf: &mut String) -> io::Result<usize> {
         self.read_to_string(buf)
     }
 }
@@ -74,13 +91,18 @@ impl Decompressor for GzDecoder<&[u8]> {
 #[derive(Debug, Clone, ValueEnum)]
 enum Algorithms {
     GZIP,
+    ZLIB,
 }
 
 impl Algorithms {
-    pub fn compress(&self) -> io::Result<Vec<u8>> {
-        let mut e = match self {
+    fn get_algo(&self) -> impl Encoder {
+        match self {
             Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()),
-        };
+            Self::ZLIB => todo!(),
+        }
+    }
+    pub fn compress(&self) -> io::Result<Vec<u8>> {
+        let mut e = self.get_algo();
 
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
@@ -91,7 +113,7 @@ impl Algorithms {
             e.buffer(line.as_bytes())?;
         }
 
-        e.compress()
+        e.encode()
     }
 
     pub fn decompress(&self) -> io::Result<Vec<u8>> {
@@ -101,9 +123,10 @@ impl Algorithms {
 
         let mut d = match self {
             Self::GZIP => GzDecoder::new(buf),
+            Self::ZLIB => todo!(),
         };
         let mut s = String::new();
-        d.decompress(&mut s)?;
+        d.decode(&mut s)?;
 
         // Consume the buffer and make sure no one else uses it.
         let len = buf.len();
