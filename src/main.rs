@@ -22,27 +22,21 @@ fn main() -> io::Result<()> {
     if atty::is(atty::Stream::Stdin) {
         use clap::CommandFactory;
         let mut cmd = Args::command();
-        match cmd.print_help() {
-            Ok(_) => (),
-            Err(error) => panic!("{error}"),
-        }
+        cmd.print_help()?;
+
         println!("Requires STDIN... Nothing found");
         return Ok(());
     }
 
     let c = if args.decompress {
-        args.algorithm.decompress()
+        args.algorithm.decompress()?
     } else {
-        args.algorithm.compress()
-    };
-    let c = match c {
-        Ok(writer) => writer,
-        Err(error) => panic!("Unable to encode: {error}"),
+        args.algorithm.compress()?
     };
 
     let mut stdout = std::io::stdout();
     match stdout.write(&c) {
         Ok(_) => Ok(()),
-        Err(error) => panic!("Unable to write to STDOUT: {error}"),
+        Err(error) => Err(error),
     }
 }

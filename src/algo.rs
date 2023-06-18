@@ -38,7 +38,7 @@ trait Method {
     {
         let stdin = io::stdin();
         let mut stdin = stdin.lock();
-        let buf = stdin.fill_buf().unwrap();
+        let buf = stdin.fill_buf()?;
         self.buffer(buf)?;
         self.encode()
     }
