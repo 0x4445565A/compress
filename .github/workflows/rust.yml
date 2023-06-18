@@ -2,8 +2,9 @@ name: Build, bump tag version and release
 
 on:
   push:
-    branches:
-      - master
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   release:
