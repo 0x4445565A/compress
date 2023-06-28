@@ -106,3 +106,38 @@ impl Method for DeflateDecoder<Vec<u8>> {
         self.write_all(buf)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compress_decompress_gzip() {
+        let compare = "Some wacky string that is full of. all. kinds. of ;;; text";
+        let compare_data = compare.as_bytes();
+        let compressed_data = Algorithms::GZIP.compress(compare_data).unwrap();
+        let compressed_data = compressed_data.to_owned();
+        let decompressed_data = Algorithms::GZIP.decompress(&compressed_data).unwrap();
+        assert_eq!(compare.as_bytes(), decompressed_data);
+    }
+
+    #[test]
+    fn compress_decompress_zlib() {
+        let compare = "Some wacky string that is full of. all. kinds. of ;;; text";
+        let compare_data = compare.as_bytes();
+        let compressed_data = Algorithms::ZLIB.compress(compare_data).unwrap();
+        let compressed_data = compressed_data.to_owned();
+        let decompressed_data = Algorithms::ZLIB.decompress(&compressed_data).unwrap();
+        assert_eq!(compare.as_bytes(), decompressed_data);
+    }
+
+    #[test]
+    fn compress_decompress_defalte() {
+        let compare = "Some wacky string that is full of. all. kinds. of ;;; text";
+        let compare_data = compare.as_bytes();
+        let compressed_data = Algorithms::DEFLATE.compress(compare_data).unwrap();
+        let compressed_data = compressed_data.to_owned();
+        let decompressed_data = Algorithms::DEFLATE.decompress(&compressed_data).unwrap();
+        assert_eq!(compare.as_bytes(), decompressed_data);
+    }
+}
