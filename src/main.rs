@@ -1,5 +1,6 @@
 mod algo;
 
+use algo::Algorithms;
 use clap::Parser;
 use std::io::{self, Write};
 use std::str;
@@ -28,10 +29,12 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
+    let buf = Algorithms::get_stdin_buf()?;
+    let buf = buf.to_owned();
     let c = if args.decompress {
-        args.algorithm.decompress()?
+        args.algorithm.decompress(&buf)?
     } else {
-        args.algorithm.compress()?
+        args.algorithm.compress(&buf)?
     };
 
     let mut stdout = std::io::stdout();

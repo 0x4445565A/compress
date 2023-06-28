@@ -14,31 +14,34 @@ pub enum Algorithms {
 }
 
 impl Algorithms {
-    pub fn compress(&self) -> io::Result<Vec<u8>> {
+    pub fn get_stdin_buf() -> io::Result<Vec<u8>> {
+        let mut stdin = io::stdin().lock();
+        let buf = stdin.fill_buf()?;
+        Ok(buf.to_vec())
+    }
+
+    pub fn compress(&self, buf: &[u8]) -> io::Result<Vec<u8>> {
         match self {
-            Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()).run(),
-            Self::ZLIB => ZlibEncoder::new(Vec::new(), Compression::default()).run(),
-            Self::DEFLATE => DeflateEncoder::new(Vec::new(), Compression::default()).run(),
+            Self::GZIP => GzEncoder::new(Vec::new(), Compression::default()).run(buf),
+            Self::ZLIB => ZlibEncoder::new(Vec::new(), Compression::default()).run(buf),
+            Self::DEFLATE => DeflateEncoder::new(Vec::new(), Compression::default()).run(buf),
         }
     }
 
-    pub fn decompress(&self) -> io::Result<Vec<u8>> {
+    pub fn decompress(&self, buf: &[u8]) -> io::Result<Vec<u8>> {
         match self {
-            Self::GZIP => GzDecoder::new(Vec::new()).run(),
-            Self::ZLIB => ZlibDecoder::new(Vec::new()).run(),
-            Self::DEFLATE => DeflateDecoder::new(Vec::new()).run(),
+            Self::GZIP => GzDecoder::new(Vec::new()).run(buf),
+            Self::ZLIB => ZlibDecoder::new(Vec::new()).run(buf),
+            Self::DEFLATE => DeflateDecoder::new(Vec::new()).run(buf),
         }
     }
 }
 
 trait Method {
-    fn run(mut self) -> io::Result<Vec<u8>>
+    fn run(mut self, buf: &[u8]) -> io::Result<Vec<u8>>
     where
         Self: Sized,
     {
-        let stdin = io::stdin();
-        let mut stdin = stdin.lock();
-        let buf = stdin.fill_buf()?;
         self.buffer(buf)?;
         self.encode()
     }
