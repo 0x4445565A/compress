@@ -9,6 +9,8 @@ edition = "2021"
 atty = "0.2"
 flate2 = "1.0"
 clap = { version = "4.3", features = ["derive"] }
+strum = "0.25.0"
+strum_macros = "0.25.0"
 
 [profile.release]
 strip = true
